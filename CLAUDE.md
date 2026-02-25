@@ -39,9 +39,9 @@ Phase: DEVELOPMENT
 ## Task Backlog
 - [x] Create project structure, pyproject.toml, and initial configuration
 - [x] Set up FastAPI app skeleton with health check, CORS, and error handling
-- [ ] Create database models (User, Site, PageviewEvent, DailyPageStats, DailyReferrerStats, DailyBrowserStats, DailyDeviceStats, DailyCountryStats, DailyUTMStats)
-- [ ] Set up Alembic and create initial migration
-- [ ] Implement user auth (register, login, logout, get current user) with JWT httponly cookies
+- [x] Create database models (User, Site, PageviewEvent, DailyPageStats, DailyReferrerStats, DailyBrowserStats, DailyDeviceStats, DailyCountryStats, DailyUTMStats)
+- [x] Set up Alembic and create initial migration
+- [x] Implement user auth (register, login, logout, get current user) with JWT httponly cookies
 - [ ] Implement site management CRUD (create, list, update, delete sites; generate tracking snippet)
 - [ ] Build the tracking JavaScript snippet (lightweight, cookie-free pageview collection)
 - [ ] Implement event ingestion API (receive pageviews, extract metadata, geolocate IP, compute visitor hash, store events)
@@ -69,6 +69,27 @@ Phase: DEVELOPMENT
 - Added test infrastructure (pytest-asyncio, conftest with async client)
 - Health check test passing
 
+### Session 3 — MODELS, MIGRATIONS & AUTH
+- Created all 10 database models: User, Site, PageviewEvent, DailyPageStats, DailyReferrerStats, DailyBrowserStats, DailyDeviceStats, DailyCountryStats, DailyUTMStats
+- Set up Alembic with async SQLAlchemy support, generated initial migration covering all tables with proper indexes and unique constraints
+- Built complete auth system:
+  - Auth service with bcrypt password hashing and JWT token creation/verification
+  - API endpoints: POST /api/v1/auth/register, POST /api/v1/auth/login, POST /api/v1/auth/logout, GET /api/v1/auth/me
+  - JWT httponly cookie-based authentication with configurable expiration
+  - Auth dependency injection (get_current_user, get_optional_user)
+  - Pydantic schemas for request validation (EmailStr, min_length, etc.)
+- Built professional auth UI with Tailwind CSS:
+  - Split-panel register page with branding/features on left, form on right
+  - Split-panel login page with matching design
+  - Client-side form validation, loading states, error display
+  - Responsive design (mobile collapses to single column)
+  - Dashboard placeholder page with nav bar and logout
+- Wrote 30 tests (all passing, zero warnings):
+  - 21 auth API + UI integration tests (register, login, logout, me, page redirects, error cases)
+  - 8 auth service unit tests (password hashing, JWT roundtrip, user CRUD, authentication)
+  - 1 health check test
+- Used bcrypt directly instead of passlib (passlib has compatibility issues with newer bcrypt/Python versions)
+
 ## Known Issues
 (none yet)
 
@@ -78,27 +99,47 @@ page-pulse/
 ├── CLAUDE.md
 ├── README.md
 ├── pyproject.toml
+├── alembic.ini                  # Alembic config (async SQLAlchemy)
 ├── .gitignore
 ├── .env.example
+├── alembic/
+│   ├── env.py                   # Async migration environment
+│   ├── script.py.mako
+│   └── versions/                # Migration scripts
 ├── src/
 │   └── app/
 │       ├── __init__.py
-│       ├── main.py              # FastAPI app factory, CORS, lifespan
+│       ├── main.py              # FastAPI app factory, CORS, lifespan, routes
 │       ├── config.py            # Pydantic Settings
 │       ├── database.py          # async SQLAlchemy engine + session
+│       ├── dependencies.py      # Auth dependencies (get_current_user, etc.)
 │       ├── api/
 │       │   ├── __init__.py
-│       │   └── health.py        # GET /health
+│       │   ├── health.py        # GET /health
+│       │   └── auth.py          # Auth API + UI routes
 │       ├── models/
-│       │   └── __init__.py
+│       │   ├── __init__.py      # Re-exports all models
+│       │   ├── user.py          # User model
+│       │   ├── site.py          # Site model
+│       │   ├── event.py         # PageviewEvent model
+│       │   └── stats.py         # Daily*Stats models (6 tables)
 │       ├── schemas/
-│       │   └── __init__.py
+│       │   ├── __init__.py
+│       │   └── auth.py          # UserRegister, UserLogin, UserResponse, TokenResponse
 │       ├── services/
-│       │   └── __init__.py
+│       │   ├── __init__.py
+│       │   └── auth.py          # AuthService (password, JWT, user CRUD)
 │       ├── templates/
+│       │   ├── base.html        # Base template with Tailwind CSS + HTMX
+│       │   ├── dashboard_placeholder.html
+│       │   └── auth/
+│       │       ├── register.html
+│       │       └── login.html
 │       └── static/
 └── tests/
     ├── __init__.py
-    ├── conftest.py              # async test client fixture
-    └── test_health.py           # health check test
+    ├── conftest.py              # Async test fixtures (client, db, auth_client)
+    ├── test_health.py
+    ├── test_auth.py             # 21 auth integration tests
+    └── test_auth_service.py     # 8 auth service unit tests
 ```
