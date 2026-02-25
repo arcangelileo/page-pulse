@@ -193,10 +193,10 @@ async def test_dashboard_requires_auth(client):
 
 
 @pytest.mark.asyncio
-async def test_dashboard_accessible_when_authenticated(auth_client):
-    response = await auth_client.get("/dashboard")
-    assert response.status_code == 200
-    assert "Test User" in response.text
+async def test_dashboard_redirects_to_sites(auth_client):
+    response = await auth_client.get("/dashboard", follow_redirects=False)
+    assert response.status_code == 302
+    assert "/sites" in response.headers["location"]
 
 
 # --- Root Redirect Tests ---

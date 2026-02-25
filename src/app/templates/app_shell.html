@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block body %}
+<div class="min-h-full bg-gray-50">
+    <!-- Top nav -->
+    <nav class="bg-white border-b border-gray-200 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-14">
+                <div class="flex items-center gap-6">
+                    <a href="/dashboard" class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                            </svg>
+                        </div>
+                        <span class="text-lg font-bold text-gray-900 tracking-tight hidden sm:inline">PagePulse</span>
+                    </a>
+                    <div class="hidden sm:flex items-center gap-1">
+                        <a href="/sites" class="px-3 py-1.5 text-sm font-medium rounded-md transition-colors {% if active_nav == 'sites' %}text-brand-700 bg-brand-50{% else %}text-gray-600 hover:text-gray-900 hover:bg-gray-100{% endif %}">Sites</a>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-sm text-gray-500 hidden sm:inline">{{ user.name }}</span>
+                    <button onclick="logout()" class="text-sm text-gray-500 hover:text-gray-700 font-medium transition-colors">
+                        Sign out
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {% block content %}{% endblock %}
+    </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function logout() {
+    await fetch('/api/v1/auth/logout', { method: 'POST' });
+    window.location.href = '/login';
+}
+</script>
+{% block page_scripts %}{% endblock %}
+{% endblock %}

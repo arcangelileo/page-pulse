@@ -42,9 +42,9 @@ Phase: DEVELOPMENT
 - [x] Create database models (User, Site, PageviewEvent, DailyPageStats, DailyReferrerStats, DailyBrowserStats, DailyDeviceStats, DailyCountryStats, DailyUTMStats)
 - [x] Set up Alembic and create initial migration
 - [x] Implement user auth (register, login, logout, get current user) with JWT httponly cookies
-- [ ] Implement site management CRUD (create, list, update, delete sites; generate tracking snippet)
-- [ ] Build the tracking JavaScript snippet (lightweight, cookie-free pageview collection)
-- [ ] Implement event ingestion API (receive pageviews, extract metadata, geolocate IP, compute visitor hash, store events)
+- [x] Implement site management CRUD (create, list, update, delete sites; generate tracking snippet)
+- [x] Build the tracking JavaScript snippet (lightweight, cookie-free pageview collection)
+- [x] Implement event ingestion API (receive pageviews, extract metadata, geolocate IP, compute visitor hash, store events)
 - [ ] Build analytics query service (aggregate stats by date range, top pages, referrers, countries, browsers, devices, UTMs)
 - [ ] Build the analytics dashboard UI (main dashboard with charts, date picker, site switcher)
 - [ ] Implement public shareable dashboard feature
@@ -90,6 +90,34 @@ Phase: DEVELOPMENT
   - 1 health check test
 - Used bcrypt directly instead of passlib (passlib has compatibility issues with newer bcrypt/Python versions)
 
+### Session 4 — SITE MANAGEMENT, TRACKING SCRIPT & EVENT INGESTION
+- Built complete site management CRUD:
+  - SiteService with domain normalization (strips www, protocol, paths, lowercases)
+  - API endpoints: POST/GET/PATCH/DELETE /api/v1/sites, GET /api/v1/sites/{id} (includes tracking snippet)
+  - Auth-guarded — users can only see/modify their own sites
+  - Professional sites UI: list view with empty state, add-site modal, settings page with tracking snippet
+- Built the tracking JavaScript snippet:
+  - Served from `/js/p.js`, ~700 bytes minified
+  - Cookie-free, fingerprint-free — sends only page URL, referrer, screen width, UTM params
+  - Uses `navigator.sendBeacon` with `XMLHttpRequest` fallback
+  - Supports SPA navigation (hooks into `history.pushState` and `popstate`)
+  - Handles `prerender` visibility state
+- Built event ingestion API:
+  - POST /api/v1/event — no auth required (runs on third-party sites)
+  - Privacy-preserving visitor hash: SHA-256 of daily-rotating salt + site_id + IP + User-Agent
+  - User-Agent parsing: detects Chrome, Safari, Firefox, Edge, Opera, IE; Windows, macOS, Linux, Android, iOS, ChromeOS; desktop/mobile/tablet
+  - Referrer domain extraction with www stripping
+  - Self-referral filtering (same domain as site)
+  - Country detection from CDN headers (CF-IPCountry, X-Country-Code, X-Vercel-IP-Country)
+  - Client IP extraction from X-Forwarded-For/X-Real-IP headers
+- Built reusable app shell template with nav bar and site switcher
+- Wrote 84 tests (all passing):
+  - 21 auth tests, 8 auth service tests
+  - 19 site API + UI tests, 11 site service tests
+  - 6 event ingestion integration tests
+  - 17 event service unit tests (UA parsing, visitor hash, referrer extraction, IP detection)
+  - 2 tracking script tests
+
 ## Known Issues
 (none yet)
 
@@ -116,7 +144,10 @@ page-pulse/
 │       ├── api/
 │       │   ├── __init__.py
 │       │   ├── health.py        # GET /health
-│       │   └── auth.py          # Auth API + UI routes
+│       │   ├── auth.py          # Auth API + UI routes
+│       │   ├── sites.py         # Site CRUD API + UI routes
+│       │   ├── events.py        # Event ingestion API (POST /api/v1/event)
+│       │   └── tracking.py      # Tracking script endpoint (GET /js/p.js)
 │       ├── models/
 │       │   ├── __init__.py      # Re-exports all models
 │       │   ├── user.py          # User model
@@ -125,21 +156,34 @@ page-pulse/
 │       │   └── stats.py         # Daily*Stats models (6 tables)
 │       ├── schemas/
 │       │   ├── __init__.py
-│       │   └── auth.py          # UserRegister, UserLogin, UserResponse, TokenResponse
+│       │   ├── auth.py          # UserRegister, UserLogin, UserResponse, TokenResponse
+│       │   ├── site.py          # SiteCreate, SiteUpdate, SiteResponse, SiteWithSnippet
+│       │   └── event.py         # EventPayload
 │       ├── services/
 │       │   ├── __init__.py
-│       │   └── auth.py          # AuthService (password, JWT, user CRUD)
+│       │   ├── auth.py          # AuthService (password, JWT, user CRUD)
+│       │   ├── site.py          # SiteService (CRUD, domain normalization, snippet generation)
+│       │   └── event.py         # EventService (visitor hash, UA parsing, event recording)
 │       ├── templates/
 │       │   ├── base.html        # Base template with Tailwind CSS + HTMX
+│       │   ├── app_shell.html   # Authenticated app shell with nav
 │       │   ├── dashboard_placeholder.html
-│       │   └── auth/
-│       │       ├── register.html
-│       │       └── login.html
+│       │   ├── auth/
+│       │   │   ├── register.html
+│       │   │   └── login.html
+│       │   └── sites/
+│       │       ├── index.html   # Site list page with add modal
+│       │       └── settings.html # Site settings with tracking snippet
 │       └── static/
 └── tests/
     ├── __init__.py
     ├── conftest.py              # Async test fixtures (client, db, auth_client)
     ├── test_health.py
     ├── test_auth.py             # 21 auth integration tests
-    └── test_auth_service.py     # 8 auth service unit tests
+    ├── test_auth_service.py     # 8 auth service unit tests
+    ├── test_sites.py            # 19 site API + UI integration tests
+    ├── test_site_service.py     # 11 site service unit tests
+    ├── test_events.py           # 6 event ingestion integration tests
+    ├── test_event_service.py    # 17 event service unit tests
+    └── test_tracking.py         # 2 tracking script tests
 ```

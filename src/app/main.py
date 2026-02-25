@@ -7,6 +7,9 @@ from fastapi.templating import Jinja2Templates
 
 from app.api import health
 from app.api.auth import router as auth_router, ui_router as auth_ui_router
+from app.api.events import router as events_router
+from app.api.sites import router as sites_router, ui_router as sites_ui_router
+from app.api.tracking import router as tracking_router
 from app.config import settings
 from app.database import Base, engine
 from app.dependencies import get_current_user, get_optional_user
@@ -42,6 +45,10 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(auth_router)
     app.include_router(auth_ui_router)
+    app.include_router(sites_router)
+    app.include_router(sites_ui_router)
+    app.include_router(tracking_router)
+    app.include_router(events_router)
 
     @app.get("/", response_class=HTMLResponse)
     async def landing(request: Request, user: User | None = Depends(get_optional_user)):
@@ -50,12 +57,10 @@ def create_app() -> FastAPI:
         return RedirectResponse(url="/login", status_code=302)
 
     @app.get("/dashboard", response_class=HTMLResponse)
-    async def dashboard_placeholder(
+    async def dashboard_redirect(
         request: Request, current_user: User = Depends(get_current_user)
     ):
-        return templates.TemplateResponse(
-            request, "dashboard_placeholder.html", {"user": current_user}
-        )
+        return RedirectResponse(url="/sites", status_code=302)
 
     return app
 
