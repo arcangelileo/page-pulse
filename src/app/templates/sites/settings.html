@@ -95,10 +95,33 @@
         <div class="bg-white rounded-xl border border-red-200 p-6">
             <h2 class="text-base font-semibold text-red-900 mb-1">Danger zone</h2>
             <p class="text-sm text-gray-500 mb-4">Permanently delete this site and all its analytics data. This cannot be undone.</p>
-            <button onclick="confirmDelete()" id="delete-btn" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors">
+            <button onclick="openDeleteModal()" id="delete-btn" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                 Delete this site
             </button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="delete-modal" class="hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+    <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" onclick="closeDeleteModal()"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 relative fade-in">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                </div>
+                <div>
+                    <h3 id="delete-modal-title" class="text-base font-semibold text-gray-900">Delete site</h3>
+                    <p class="text-sm text-gray-500">This action cannot be undone.</p>
+                </div>
+            </div>
+            <p class="text-sm text-gray-600 mb-5">Are you sure you want to permanently delete <strong>{{ site.name }}</strong> and all its analytics data?</p>
+            <div class="flex gap-3">
+                <button onclick="closeDeleteModal()" class="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
+                <button onclick="performDelete()" id="confirm-delete-btn" class="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50">Delete site</button>
+            </div>
         </div>
     </div>
 </div>
@@ -162,15 +185,38 @@ document.getElementById('edit-form').addEventListener('submit', async (e) => {
     }
 });
 
-function confirmDelete() {
-    if (!confirm('Are you sure you want to delete this site? All analytics data will be permanently lost.')) return;
-    fetch('/api/v1/sites/' + SITE_ID, { method: 'DELETE' }).then(resp => {
+function openDeleteModal() {
+    document.getElementById('delete-modal').classList.remove('hidden');
+}
+function closeDeleteModal() {
+    document.getElementById('delete-modal').classList.add('hidden');
+}
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeDeleteModal();
+});
+async function performDelete() {
+    const btn = document.getElementById('confirm-delete-btn');
+    btn.disabled = true;
+    btn.textContent = 'Deleting...';
+    try {
+        const resp = await fetch('/api/v1/sites/' + SITE_ID, { method: 'DELETE' });
         if (resp.ok) {
             window.location.href = '/sites';
         } else {
-            alert('Failed to delete site.');
+            closeDeleteModal();
+            const errDiv = document.getElementById('edit-error');
+            errDiv.textContent = 'Failed to delete site. Please try again.';
+            errDiv.classList.remove('hidden');
         }
-    });
+    } catch (err) {
+        closeDeleteModal();
+        const errDiv = document.getElementById('edit-error');
+        errDiv.textContent = 'Network error. Please try again.';
+        errDiv.classList.remove('hidden');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Delete site';
+    }
 }
 </script>
 {% endblock %}

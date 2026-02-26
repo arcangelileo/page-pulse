@@ -1,6 +1,6 @@
 # PagePulse
 
-Phase: QA
+Phase: DEPLOYMENT
 
 ## Project Spec
 - **Idea**: Privacy-first website analytics platform. A lightweight, cookie-free alternative to Google Analytics that gives website owners clear insights into their traffic without compromising visitor privacy. No cookies, no fingerprinting, no personal data collection — GDPR/CCPA compliant by default, no cookie banner needed. A single <script> tag gives you page views, unique visitors, referrers, top pages, devices, browsers, countries, and UTM campaign tracking in a beautiful, fast dashboard.
@@ -170,8 +170,35 @@ Phase: QA
   - 10 aggregation service tests (page/referrer/browser/device/country/UTM stats creation, idempotency, empty data, yesterday, backfill)
   - Plus all previous 84 tests for auth, sites, events, tracking
 
+### Session 6 — QA & POLISH
+- Ran full test suite (132 tests passing) as baseline
+- **Bugs found and fixed:**
+  - **Duplicate rate limiter instances**: `events.py` created its own `Limiter` separate from `main.py`'s, causing the app-level rate limit state and error handler to be disconnected from the route decorator. Fixed by extracting a shared `src/app/rate_limit.py` module imported by both.
+  - **Docker Compose SQLite path**: Had 4 slashes (`sqlite+aiosqlite:////data/pagepulse.db`) instead of 3. Fixed to `///data/pagepulse.db`.
+  - **No date range validation**: Custom date ranges with start > end silently produced empty results. Added auto-swap logic in `AnalyticsService._parse_date_range()`.
+  - **Silent error swallowing**: Event ingestion `except` clause had no logging. Added `logger.debug()` with `exc_info=True` for diagnostics.
+  - **Duplicate httpx dependency**: Listed in both main and dev dependencies in `pyproject.toml`. Removed from main deps.
+- **UI/UX polish:**
+  - Added `prefers-reduced-motion` media query to disable Chart.js animations for accessibility
+  - Added ARIA labels to main navigation, logo link, and sign-out button
+  - Added SVG favicon and meta description to base template
+  - Added `role="progressbar"` with `aria-valuenow/min/max` on all progress bars (browsers, devices, countries)
+  - Added `hover:bg-gray-50` row hover states on all data tables
+  - Added focus ring styles (`focus:ring-2 focus:ring-brand-500`) to sign-out button
+  - Improved logout error handling with try/catch around fetch
+  - Replaced browser `confirm()`/`alert()` in site deletion with proper modal dialog (ARIA `role="dialog"`, `aria-modal`, `aria-labelledby`, loading state, error handling)
+  - Added client-side date validation that auto-swaps start/end if reversed (both dashboards)
+  - **Built marketing landing page** (`landing.html`): hero section with CTA, social proof stats bar, 6-feature grid with icons, 3-tier pricing section (Free/$0, Pro/$9/mo, Business/$29/mo), bottom CTA, footer. Professional design with brand colors, responsive layout.
+  - Updated root route (`/`) to render landing page for unauthenticated users (redirect to dashboard for authenticated)
+- **Tests added:**
+  - `test_date_range_custom_swapped` — verifies auto-swap of reversed custom date ranges
+  - `test_landing_page` — verifies landing page renders with expected content (PagePulse, CTA, privacy, GDPR)
+  - `test_landing_page_redirects_when_authenticated` — verifies authenticated users get redirected to dashboard
+  - Updated `test_root_shows_landing_page` and `test_root_redirects_to_dashboard_when_authenticated` in auth tests
+- **Final test count: 135 tests, all passing, zero warnings**
+
 ## Known Issues
-(none yet)
+(none)
 
 ## Files Structure
 ```
@@ -195,6 +222,7 @@ page-pulse/
 │       ├── config.py            # Pydantic Settings
 │       ├── database.py          # async SQLAlchemy engine + session
 │       ├── dependencies.py      # Auth dependencies (get_current_user, etc.)
+│       ├── rate_limit.py        # Shared slowapi Limiter instance
 │       ├── scheduler.py         # APScheduler nightly aggregation job
 │       ├── api/
 │       │   ├── __init__.py
@@ -225,6 +253,7 @@ page-pulse/
 │       ├── templates/
 │       │   ├── base.html        # Base template with Tailwind CSS + HTMX
 │       │   ├── app_shell.html   # Authenticated app shell with nav
+│       │   ├── landing.html     # Marketing landing page (unauthenticated users)
 │       │   ├── auth/
 │       │   │   ├── register.html
 │       │   │   └── login.html
@@ -243,10 +272,10 @@ page-pulse/
     ├── test_auth_service.py     # 8 auth service unit tests
     ├── test_sites.py            # 19 site API + UI integration tests
     ├── test_site_service.py     # 11 site service unit tests
-    ├── test_events.py           # 6 event ingestion integration tests
+    ├── test_events.py           # 8 event ingestion + landing page tests
     ├── test_event_service.py    # 17 event service unit tests
     ├── test_tracking.py         # 2 tracking script tests
-    ├── test_analytics_service.py # 21 analytics service unit tests
+    ├── test_analytics_service.py # 22 analytics service unit tests
     ├── test_dashboard.py        # 22 dashboard integration tests
     └── test_aggregation_service.py # 10 aggregation service tests
 ```

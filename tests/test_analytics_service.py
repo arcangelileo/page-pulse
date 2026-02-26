@@ -82,6 +82,14 @@ async def test_date_range_custom_invalid():
 
 
 @pytest.mark.asyncio
+async def test_date_range_custom_swapped():
+    """When start > end, dates should be auto-swapped."""
+    s, e = AnalyticsService._date_range("custom", "2025-01-31", "2025-01-01")
+    assert s == date(2025, 1, 1)
+    assert e == date(2025, 1, 31)
+
+
+@pytest.mark.asyncio
 async def test_get_summary(db):
     user, site = await _seed_data(db)
     today = date.today()

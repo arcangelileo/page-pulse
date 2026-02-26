@@ -89,3 +89,22 @@ async def test_ingest_event_self_referral_filtered(auth_client, client):
         },
     )
     assert resp.status_code == 202
+
+
+@pytest.mark.asyncio
+async def test_landing_page(client):
+    """Landing page should render for unauthenticated users."""
+    resp = await client.get("/", follow_redirects=False)
+    assert resp.status_code == 200
+    assert "PagePulse" in resp.text
+    assert "Get started free" in resp.text
+    assert "privacy" in resp.text.lower()
+    assert "GDPR" in resp.text
+
+
+@pytest.mark.asyncio
+async def test_landing_page_redirects_when_authenticated(auth_client):
+    """Authenticated users should be redirected from landing to dashboard."""
+    resp = await auth_client.get("/", follow_redirects=False)
+    assert resp.status_code == 302
+    assert "/dashboard" in resp.headers["location"]

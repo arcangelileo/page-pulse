@@ -127,7 +127,7 @@
                     <span class="w-20 text-right">Views</span>
                 </div>
                 {% for page in analytics.top_pages %}
-                <div class="flex items-center py-2.5 {% if not loop.last %}border-b border-gray-50{% endif %}">
+                <div class="flex items-center py-2.5 {% if not loop.last %}border-b border-gray-50{% endif %} hover:bg-gray-50 -mx-2 px-2 rounded transition-colors">
                     <span class="flex-1 text-sm text-gray-800 font-medium truncate pr-2" title="{{ page.path }}">{{ page.path }}</span>
                     <span class="w-20 text-sm text-gray-600 text-right tabular-nums">{{ "{:,}".format(page.unique_visitors) }}</span>
                     <span class="w-20 text-sm text-gray-600 text-right tabular-nums">{{ "{:,}".format(page.pageviews) }}</span>
@@ -150,7 +150,7 @@
                     <span class="w-20 text-right">Views</span>
                 </div>
                 {% for ref in analytics.top_referrers %}
-                <div class="flex items-center py-2.5 {% if not loop.last %}border-b border-gray-50{% endif %}">
+                <div class="flex items-center py-2.5 {% if not loop.last %}border-b border-gray-50{% endif %} hover:bg-gray-50 -mx-2 px-2 rounded transition-colors">
                     <span class="flex-1 text-sm text-gray-800 font-medium truncate pr-2">{{ ref.referrer_domain }}</span>
                     <span class="w-20 text-sm text-gray-600 text-right tabular-nums">{{ "{:,}".format(ref.unique_visitors) }}</span>
                     <span class="w-20 text-sm text-gray-600 text-right tabular-nums">{{ "{:,}".format(ref.pageviews) }}</span>
@@ -177,7 +177,7 @@
                         <span class="text-gray-500 tabular-nums">{{ "{:,}".format(b.unique_visitors) }}</span>
                     </div>
                     {% set pct = (b.unique_visitors / analytics.summary.unique_visitors * 100) if analytics.summary.unique_visitors > 0 else 0 %}
-                    <div class="w-full bg-gray-100 rounded-full h-1.5">
+                    <div class="w-full bg-gray-100 rounded-full h-1.5" role="progressbar" aria-valuenow="{{ pct | round(1) }}" aria-valuemin="0" aria-valuemax="100" aria-label="{{ b.browser or 'Unknown' }} {{ pct | round(1) }}%">
                         <div class="bg-brand-500 h-1.5 rounded-full" style="width: {{ pct | round(1) }}%"></div>
                     </div>
                 </div>
@@ -200,7 +200,7 @@
                         <span class="text-gray-500 tabular-nums">{{ "{:,}".format(d.unique_visitors) }}</span>
                     </div>
                     {% set pct = (d.unique_visitors / analytics.summary.unique_visitors * 100) if analytics.summary.unique_visitors > 0 else 0 %}
-                    <div class="w-full bg-gray-100 rounded-full h-1.5">
+                    <div class="w-full bg-gray-100 rounded-full h-1.5" role="progressbar" aria-valuenow="{{ pct | round(1) }}" aria-valuemin="0" aria-valuemax="100" aria-label="{{ d.device_type or 'Unknown' }} {{ pct | round(1) }}%">
                         <div class="bg-emerald-500 h-1.5 rounded-full" style="width: {{ pct | round(1) }}%"></div>
                     </div>
                 </div>
@@ -223,7 +223,7 @@
                         <span class="text-gray-500 tabular-nums">{{ "{:,}".format(c.unique_visitors) }}</span>
                     </div>
                     {% set pct = (c.unique_visitors / analytics.summary.unique_visitors * 100) if analytics.summary.unique_visitors > 0 else 0 %}
-                    <div class="w-full bg-gray-100 rounded-full h-1.5">
+                    <div class="w-full bg-gray-100 rounded-full h-1.5" role="progressbar" aria-valuenow="{{ pct | round(1) }}" aria-valuemin="0" aria-valuemax="100" aria-label="{{ c.country_code or 'Unknown' }} {{ pct | round(1) }}%">
                         <div class="bg-amber-500 h-1.5 rounded-full" style="width: {{ pct | round(1) }}%"></div>
                     </div>
                 </div>
@@ -252,7 +252,7 @@
                 </thead>
                 <tbody>
                     {% for utm in analytics.utm_campaigns %}
-                    <tr class="{% if not loop.last %}border-b border-gray-50{% endif %}">
+                    <tr class="{% if not loop.last %}border-b border-gray-50{% endif %} hover:bg-gray-50 transition-colors">
                         <td class="py-2.5 pr-4 font-medium text-gray-800">{{ utm.utm_source }}</td>
                         <td class="py-2.5 pr-4 text-gray-600">{{ utm.utm_medium or "—" }}</td>
                         <td class="py-2.5 pr-4 text-gray-600">{{ utm.utm_campaign or "—" }}</td>
@@ -300,7 +300,13 @@ document.getElementById('custom-form').addEventListener('submit', function(e) {
     const s = document.getElementById('custom-start').value;
     const ed = document.getElementById('custom-end').value;
     if (s && ed) {
-        window.location.href = '/dashboard/' + SITE_ID + '?period=custom&start=' + s + '&end=' + ed;
+        if (new Date(s) > new Date(ed)) {
+            document.getElementById('custom-start').value = ed;
+            document.getElementById('custom-end').value = s;
+            window.location.href = '/dashboard/' + SITE_ID + '?period=custom&start=' + ed + '&end=' + s;
+        } else {
+            window.location.href = '/dashboard/' + SITE_ID + '?period=custom&start=' + s + '&end=' + ed;
+        }
     }
 });
 

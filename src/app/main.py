@@ -4,9 +4,8 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 
 from app.api import health
 from app.api.auth import router as auth_router, ui_router as auth_ui_router
@@ -18,9 +17,8 @@ from app.config import settings
 from app.database import Base, engine
 from app.dependencies import get_current_user, get_optional_user
 from app.models.user import User
+from app.rate_limit import limiter
 from app.scheduler import start_scheduler, stop_scheduler
-
-limiter = Limiter(key_func=get_remote_address)
 
 
 @asynccontextmanager
@@ -68,7 +66,7 @@ def create_app() -> FastAPI:
     async def landing(request: Request, user: User | None = Depends(get_optional_user)):
         if user:
             return RedirectResponse(url="/dashboard", status_code=302)
-        return RedirectResponse(url="/login", status_code=302)
+        return templates.TemplateResponse(request, "landing.html")
 
     @app.get("/dashboard", response_class=HTMLResponse)
     async def dashboard_redirect(

@@ -28,7 +28,10 @@ class AnalyticsService:
             return today - timedelta(days=29), today
         elif period == "custom" and start and end:
             try:
-                return date.fromisoformat(start), date.fromisoformat(end)
+                s, e = date.fromisoformat(start), date.fromisoformat(end)
+                if s > e:
+                    s, e = e, s
+                return s, e
             except ValueError:
                 return today - timedelta(days=6), today
         return today - timedelta(days=6), today

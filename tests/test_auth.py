@@ -203,10 +203,11 @@ async def test_dashboard_redirects_to_sites(auth_client):
 
 
 @pytest.mark.asyncio
-async def test_root_redirects_to_login(client):
+async def test_root_shows_landing_page(client):
     response = await client.get("/", follow_redirects=False)
-    assert response.status_code == 302
-    assert "/login" in response.headers["location"]
+    assert response.status_code == 200
+    assert "PagePulse" in response.text
+    assert "privacy" in response.text.lower()
 
 
 @pytest.mark.asyncio

@@ -1,16 +1,17 @@
+import logging
+
 from fastapi import APIRouter, Depends, Request, Response, status
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.rate_limit import limiter
 from app.schemas.event import EventPayload
 from app.services.event import EventService
 from app.services.site import SiteService
 
-router = APIRouter(prefix="/api/v1", tags=["events"])
+logger = logging.getLogger(__name__)
 
-limiter = Limiter(key_func=get_remote_address)
+router = APIRouter(prefix="/api/v1", tags=["events"])
 
 
 @router.post("/event", status_code=status.HTTP_202_ACCEPTED)
@@ -24,6 +25,7 @@ async def ingest_event(
         body = await request.json()
         payload = EventPayload(**body)
     except Exception:
+        logger.debug("Failed to parse event payload", exc_info=True)
         return Response(status_code=status.HTTP_400_BAD_REQUEST)
 
     # Validate the site exists
