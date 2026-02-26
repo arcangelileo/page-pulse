@@ -1,6 +1,6 @@
 # PagePulse
 
-Phase: DEVELOPMENT
+Phase: QA
 
 ## Project Spec
 - **Idea**: Privacy-first website analytics platform. A lightweight, cookie-free alternative to Google Analytics that gives website owners clear insights into their traffic without compromising visitor privacy. No cookies, no fingerprinting, no personal data collection — GDPR/CCPA compliant by default, no cookie banner needed. A single <script> tag gives you page views, unique visitors, referrers, top pages, devices, browsers, countries, and UTM campaign tracking in a beautiful, fast dashboard.
@@ -45,14 +45,14 @@ Phase: DEVELOPMENT
 - [x] Implement site management CRUD (create, list, update, delete sites; generate tracking snippet)
 - [x] Build the tracking JavaScript snippet (lightweight, cookie-free pageview collection)
 - [x] Implement event ingestion API (receive pageviews, extract metadata, geolocate IP, compute visitor hash, store events)
-- [ ] Build analytics query service (aggregate stats by date range, top pages, referrers, countries, browsers, devices, UTMs)
-- [ ] Build the analytics dashboard UI (main dashboard with charts, date picker, site switcher)
-- [ ] Implement public shareable dashboard feature
-- [ ] Add background aggregation job (nightly rollup of raw events into daily summary tables)
-- [ ] Add rate limiting to event ingestion endpoint
-- [ ] Write comprehensive tests (auth, sites, event ingestion, analytics queries, aggregation)
-- [ ] Write Dockerfile and docker-compose.yml
-- [ ] Write README with setup, deployment, and usage instructions
+- [x] Build analytics query service (aggregate stats by date range, top pages, referrers, countries, browsers, devices, UTMs)
+- [x] Build the analytics dashboard UI (main dashboard with charts, date picker, site switcher)
+- [x] Implement public shareable dashboard feature
+- [x] Add background aggregation job (nightly rollup of raw events into daily summary tables)
+- [x] Add rate limiting to event ingestion endpoint
+- [x] Write comprehensive tests (auth, sites, event ingestion, analytics queries, aggregation)
+- [x] Write Dockerfile and docker-compose.yml
+- [x] Write README with setup, deployment, and usage instructions
 
 ## Progress Log
 ### Session 1 — IDEATION
@@ -118,6 +118,58 @@ Phase: DEVELOPMENT
   - 17 event service unit tests (UA parsing, visitor hash, referrer extraction, IP detection)
   - 2 tracking script tests
 
+### Session 5 — ANALYTICS DASHBOARD, AGGREGATION, RATE LIMITING & DOCKER
+- Built complete analytics query service (AnalyticsService):
+  - Date range parsing (today/7d/30d/custom with fallback)
+  - Summary stats: total pageviews, unique visitors
+  - Bounce rate calculation (% of single-pageview visitors)
+  - Visitors over time with zero-fill for missing days
+  - Top pages, top referrers, browsers, devices, countries, UTM campaigns
+  - Full dashboard aggregation method
+  - Fixed SQLite date filtering (use `func.date()` instead of `cast(timestamp, Date)`)
+- Built production-quality analytics dashboard UI:
+  - Site switcher dropdown for multi-site navigation
+  - Date range picker: Today / 7 days / 30 days / Custom date range popup
+  - 3 stat cards: Pageviews, Unique visitors, Bounce rate (with icons + formatting)
+  - Chart.js line chart for "Visitors over time" (Unique Visitors + Pageviews lines, responsive, tooltips)
+  - Two-column layout: Top pages table + Top referrers table
+  - Three-column layout: Browsers (progress bars), Devices (progress bars), Countries (progress bars)
+  - UTM Campaigns table (source/medium/campaign/visitors/views)
+  - Empty states for all sections when no data
+  - Settings and All sites footer links
+- Built public shareable dashboard:
+  - Public nav bar with PagePulse branding + "Public Dashboard" badge + Sign in link
+  - Same analytics widgets as authenticated dashboard
+  - Date range picker (Today/7d/30d/Custom)
+  - "Powered by PagePulse" footer
+  - Accessible without auth when site.public is toggled on
+  - Returns 404 for non-public sites
+- Built background aggregation service (AggregationService):
+  - Rolls up raw PageviewEvents into 6 daily stats tables (pages, referrers, browsers, devices, countries, UTMs)
+  - Idempotent — safely re-runnable (clears existing aggregates before re-inserting)
+  - Per-site processing for all sites with events on target date
+  - `aggregate_day()`, `aggregate_yesterday()`, `backfill()` methods
+  - APScheduler integration: nightly cron job at 00:15 UTC
+  - Scheduler starts/stops with app lifespan
+- Added rate limiting to event ingestion:
+  - 60 requests/minute per IP using slowapi
+  - Rate limit exceeded handler returns 429 Too Many Requests
+- Created Dockerfile and docker-compose.yml:
+  - Python 3.12-slim base image
+  - SQLite data volume for persistence
+  - Health check with urllib
+  - Environment variable configuration
+- Updated README with comprehensive documentation:
+  - Features, Quick Start (local + Docker), Configuration table
+  - Usage guide, Tracking script details, Tech stack
+  - Full API endpoint reference
+- Fixed FastAPI deprecation: `regex` → `pattern` in Query parameters
+- Wrote 132 tests (all passing, zero warnings):
+  - 21 analytics service tests (date ranges, summary, bounce rate, visitors over time, top pages/referrers/browsers/devices/countries/UTMs, full dashboard, empty states)
+  - 22 dashboard integration tests (page loads, data display, date periods, custom ranges, auth checks, site switcher, public dashboard, analytics API, permission checks)
+  - 10 aggregation service tests (page/referrer/browser/device/country/UTM stats creation, idempotency, empty data, yesterday, backfill)
+  - Plus all previous 84 tests for auth, sites, events, tracking
+
 ## Known Issues
 (none yet)
 
@@ -127,6 +179,8 @@ page-pulse/
 ├── CLAUDE.md
 ├── README.md
 ├── pyproject.toml
+├── Dockerfile                   # Python 3.12-slim container
+├── docker-compose.yml           # Single-service with SQLite volume
 ├── alembic.ini                  # Alembic config (async SQLAlchemy)
 ├── .gitignore
 ├── .env.example
@@ -137,16 +191,18 @@ page-pulse/
 ├── src/
 │   └── app/
 │       ├── __init__.py
-│       ├── main.py              # FastAPI app factory, CORS, lifespan, routes
+│       ├── main.py              # FastAPI app factory, CORS, rate limiting, lifespan, routes
 │       ├── config.py            # Pydantic Settings
 │       ├── database.py          # async SQLAlchemy engine + session
 │       ├── dependencies.py      # Auth dependencies (get_current_user, etc.)
+│       ├── scheduler.py         # APScheduler nightly aggregation job
 │       ├── api/
 │       │   ├── __init__.py
 │       │   ├── health.py        # GET /health
 │       │   ├── auth.py          # Auth API + UI routes
 │       │   ├── sites.py         # Site CRUD API + UI routes
-│       │   ├── events.py        # Event ingestion API (POST /api/v1/event)
+│       │   ├── events.py        # Event ingestion API (POST /api/v1/event) with rate limiting
+│       │   ├── dashboard.py     # Analytics API + dashboard UI routes
 │       │   └── tracking.py      # Tracking script endpoint (GET /js/p.js)
 │       ├── models/
 │       │   ├── __init__.py      # Re-exports all models
@@ -163,27 +219,34 @@ page-pulse/
 │       │   ├── __init__.py
 │       │   ├── auth.py          # AuthService (password, JWT, user CRUD)
 │       │   ├── site.py          # SiteService (CRUD, domain normalization, snippet generation)
-│       │   └── event.py         # EventService (visitor hash, UA parsing, event recording)
+│       │   ├── event.py         # EventService (visitor hash, UA parsing, event recording)
+│       │   ├── analytics.py     # AnalyticsService (dashboard queries, date ranges, aggregations)
+│       │   └── aggregation.py   # AggregationService (nightly rollup into daily stats tables)
 │       ├── templates/
 │       │   ├── base.html        # Base template with Tailwind CSS + HTMX
 │       │   ├── app_shell.html   # Authenticated app shell with nav
-│       │   ├── dashboard_placeholder.html
 │       │   ├── auth/
 │       │   │   ├── register.html
 │       │   │   └── login.html
-│       │   └── sites/
-│       │       ├── index.html   # Site list page with add modal
-│       │       └── settings.html # Site settings with tracking snippet
+│       │   ├── sites/
+│       │   │   ├── index.html   # Site list page with add modal
+│       │   │   └── settings.html # Site settings with tracking snippet
+│       │   └── dashboard/
+│       │       ├── index.html   # Authenticated dashboard with charts + widgets
+│       │       └── public.html  # Public shareable dashboard
 │       └── static/
 └── tests/
     ├── __init__.py
     ├── conftest.py              # Async test fixtures (client, db, auth_client)
-    ├── test_health.py
+    ├── test_health.py           # 1 health check test
     ├── test_auth.py             # 21 auth integration tests
     ├── test_auth_service.py     # 8 auth service unit tests
     ├── test_sites.py            # 19 site API + UI integration tests
     ├── test_site_service.py     # 11 site service unit tests
     ├── test_events.py           # 6 event ingestion integration tests
     ├── test_event_service.py    # 17 event service unit tests
-    └── test_tracking.py         # 2 tracking script tests
+    ├── test_tracking.py         # 2 tracking script tests
+    ├── test_analytics_service.py # 21 analytics service unit tests
+    ├── test_dashboard.py        # 22 dashboard integration tests
+    └── test_aggregation_service.py # 10 aggregation service tests
 ```

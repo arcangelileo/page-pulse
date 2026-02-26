@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends, Request, Response, status
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -8,8 +10,11 @@ from app.services.site import SiteService
 
 router = APIRouter(prefix="/api/v1", tags=["events"])
 
+limiter = Limiter(key_func=get_remote_address)
+
 
 @router.post("/event", status_code=status.HTTP_202_ACCEPTED)
+@limiter.limit("60/minute")
 async def ingest_event(
     request: Request,
     db: AsyncSession = Depends(get_db),

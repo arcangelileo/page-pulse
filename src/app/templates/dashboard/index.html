@@ -1,0 +1,414 @@
+{% extends "app_shell.html" %}
+{% set active_nav = "dashboard" %}
+
+{% block title %}{{ site.name }} Dashboard — PagePulse{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <!-- Header row: site switcher + date range picker -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <div class="flex items-center gap-3">
+            <!-- Site switcher -->
+            <div class="relative" id="site-switcher">
+                <button onclick="toggleSiteSwitcher()" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-gray-900 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm">
+                    <div class="w-5 h-5 rounded bg-brand-100 flex items-center justify-center">
+                        <svg class="w-3 h-3 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
+                    </div>
+                    <span class="max-w-[180px] truncate">{{ site.name }}</span>
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div id="site-dropdown" class="hidden absolute left-0 top-full mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1">
+                    {% for s in sites %}
+                    <a href="/dashboard/{{ s.id }}{% if period != '7d' %}?period={{ period }}{% endif %}"
+                       class="flex items-center gap-2 px-3 py-2 text-sm {% if s.id == site.id %}text-brand-700 bg-brand-50 font-medium{% else %}text-gray-700 hover:bg-gray-50{% endif %} transition-colors">
+                        <span class="truncate">{{ s.name }}</span>
+                        <span class="text-xs text-gray-400 ml-auto flex-shrink-0">{{ s.domain }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Public badge -->
+            {% if site.public %}
+            <a href="/share/{{ site.id }}" class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-md hover:bg-green-100 transition-colors" title="View public dashboard">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                Public
+            </a>
+            {% endif %}
+        </div>
+
+        <!-- Date range picker -->
+        <div class="flex items-center gap-2">
+            <div class="inline-flex bg-white border border-gray-300 rounded-lg shadow-sm overflow-hidden" role="group">
+                <a href="/dashboard/{{ site.id }}?period=today" class="px-3 py-2 text-sm font-medium border-r border-gray-300 transition-colors {% if period == 'today' %}bg-brand-600 text-white{% else %}text-gray-700 hover:bg-gray-50{% endif %}">Today</a>
+                <a href="/dashboard/{{ site.id }}?period=7d" class="px-3 py-2 text-sm font-medium border-r border-gray-300 transition-colors {% if period == '7d' %}bg-brand-600 text-white{% else %}text-gray-700 hover:bg-gray-50{% endif %}">7 days</a>
+                <a href="/dashboard/{{ site.id }}?period=30d" class="px-3 py-2 text-sm font-medium transition-colors {% if period == '30d' %}bg-brand-600 text-white{% else %}text-gray-700 hover:bg-gray-50{% endif %}">30 days</a>
+            </div>
+            <div class="relative">
+                <button onclick="toggleCustomRange()" class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-white border border-gray-300 rounded-lg shadow-sm transition-colors {% if period == 'custom' %}bg-brand-50 text-brand-700 border-brand-300{% else %}text-gray-700 hover:bg-gray-50{% endif %}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    {% if period == 'custom' %}{{ start_date }} → {{ end_date }}{% else %}Custom{% endif %}
+                </button>
+                <div id="custom-range" class="hidden absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-4 w-72">
+                    <form id="custom-form" class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Start date</label>
+                            <input type="date" id="custom-start" value="{{ start_date }}" class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">End date</label>
+                            <input type="date" id="custom-end" value="{{ end_date }}" class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
+                        </div>
+                        <button type="submit" class="w-full px-3 py-2 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-lg transition-colors">Apply range</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Date range label -->
+    <p class="text-sm text-gray-500 mb-6">
+        {{ start_date }} — {{ end_date }}
+    </p>
+
+    <!-- Summary stat cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        <div class="bg-white rounded-xl border border-gray-200 p-5">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                </div>
+                <span class="text-sm font-medium text-gray-500">Pageviews</span>
+            </div>
+            <p class="text-3xl font-bold text-gray-900" id="stat-pageviews">{{ "{:,}".format(analytics.summary.pageviews) }}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-5">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                </div>
+                <span class="text-sm font-medium text-gray-500">Unique visitors</span>
+            </div>
+            <p class="text-3xl font-bold text-gray-900" id="stat-visitors">{{ "{:,}".format(analytics.summary.unique_visitors) }}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-5">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                </div>
+                <span class="text-sm font-medium text-gray-500">Bounce rate</span>
+            </div>
+            <p class="text-3xl font-bold text-gray-900" id="stat-bounce">{{ analytics.summary.bounce_rate }}%</p>
+        </div>
+    </div>
+
+    <!-- Visitors over time chart -->
+    <div class="bg-white rounded-xl border border-gray-200 p-6 mb-8">
+        <h2 class="text-base font-semibold text-gray-900 mb-4">Visitors over time</h2>
+        <div class="h-72">
+            <canvas id="visitors-chart"></canvas>
+        </div>
+    </div>
+
+    <!-- Two-column breakdown -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Top pages -->
+        <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 class="text-base font-semibold text-gray-900 mb-4">Top pages</h2>
+            {% if analytics.top_pages %}
+            <div class="space-y-0">
+                <div class="flex items-center text-xs font-medium text-gray-500 uppercase tracking-wider pb-2 border-b border-gray-100">
+                    <span class="flex-1">Page</span>
+                    <span class="w-20 text-right">Visitors</span>
+                    <span class="w-20 text-right">Views</span>
+                </div>
+                {% for page in analytics.top_pages %}
+                <div class="flex items-center py-2.5 {% if not loop.last %}border-b border-gray-50{% endif %}">
+                    <span class="flex-1 text-sm text-gray-800 font-medium truncate pr-2" title="{{ page.path }}">{{ page.path }}</span>
+                    <span class="w-20 text-sm text-gray-600 text-right tabular-nums">{{ "{:,}".format(page.unique_visitors) }}</span>
+                    <span class="w-20 text-sm text-gray-600 text-right tabular-nums">{{ "{:,}".format(page.pageviews) }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-sm text-gray-400 py-8 text-center">No data for this period.</p>
+            {% endif %}
+        </div>
+
+        <!-- Top referrers -->
+        <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 class="text-base font-semibold text-gray-900 mb-4">Top referrers</h2>
+            {% if analytics.top_referrers %}
+            <div class="space-y-0">
+                <div class="flex items-center text-xs font-medium text-gray-500 uppercase tracking-wider pb-2 border-b border-gray-100">
+                    <span class="flex-1">Source</span>
+                    <span class="w-20 text-right">Visitors</span>
+                    <span class="w-20 text-right">Views</span>
+                </div>
+                {% for ref in analytics.top_referrers %}
+                <div class="flex items-center py-2.5 {% if not loop.last %}border-b border-gray-50{% endif %}">
+                    <span class="flex-1 text-sm text-gray-800 font-medium truncate pr-2">{{ ref.referrer_domain }}</span>
+                    <span class="w-20 text-sm text-gray-600 text-right tabular-nums">{{ "{:,}".format(ref.unique_visitors) }}</span>
+                    <span class="w-20 text-sm text-gray-600 text-right tabular-nums">{{ "{:,}".format(ref.pageviews) }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-sm text-gray-400 py-8 text-center">No referrer data for this period.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Three-column breakdown: browsers, devices, countries -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <!-- Browsers -->
+        <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 class="text-base font-semibold text-gray-900 mb-4">Browsers</h2>
+            {% if analytics.browsers %}
+            <div class="space-y-3">
+                {% for b in analytics.browsers %}
+                <div>
+                    <div class="flex items-center justify-between text-sm mb-1">
+                        <span class="font-medium text-gray-800">{{ b.browser or "Unknown" }}</span>
+                        <span class="text-gray-500 tabular-nums">{{ "{:,}".format(b.unique_visitors) }}</span>
+                    </div>
+                    {% set pct = (b.unique_visitors / analytics.summary.unique_visitors * 100) if analytics.summary.unique_visitors > 0 else 0 %}
+                    <div class="w-full bg-gray-100 rounded-full h-1.5">
+                        <div class="bg-brand-500 h-1.5 rounded-full" style="width: {{ pct | round(1) }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-sm text-gray-400 py-6 text-center">No data.</p>
+            {% endif %}
+        </div>
+
+        <!-- Devices -->
+        <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 class="text-base font-semibold text-gray-900 mb-4">Devices</h2>
+            {% if analytics.devices %}
+            <div class="space-y-3">
+                {% for d in analytics.devices %}
+                <div>
+                    <div class="flex items-center justify-between text-sm mb-1">
+                        <span class="font-medium text-gray-800 capitalize">{{ d.device_type or "Unknown" }}</span>
+                        <span class="text-gray-500 tabular-nums">{{ "{:,}".format(d.unique_visitors) }}</span>
+                    </div>
+                    {% set pct = (d.unique_visitors / analytics.summary.unique_visitors * 100) if analytics.summary.unique_visitors > 0 else 0 %}
+                    <div class="w-full bg-gray-100 rounded-full h-1.5">
+                        <div class="bg-emerald-500 h-1.5 rounded-full" style="width: {{ pct | round(1) }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-sm text-gray-400 py-6 text-center">No data.</p>
+            {% endif %}
+        </div>
+
+        <!-- Countries -->
+        <div class="bg-white rounded-xl border border-gray-200 p-6">
+            <h2 class="text-base font-semibold text-gray-900 mb-4">Countries</h2>
+            {% if analytics.countries %}
+            <div class="space-y-3">
+                {% for c in analytics.countries %}
+                <div>
+                    <div class="flex items-center justify-between text-sm mb-1">
+                        <span class="font-medium text-gray-800">{{ c.country_code or "Unknown" }}</span>
+                        <span class="text-gray-500 tabular-nums">{{ "{:,}".format(c.unique_visitors) }}</span>
+                    </div>
+                    {% set pct = (c.unique_visitors / analytics.summary.unique_visitors * 100) if analytics.summary.unique_visitors > 0 else 0 %}
+                    <div class="w-full bg-gray-100 rounded-full h-1.5">
+                        <div class="bg-amber-500 h-1.5 rounded-full" style="width: {{ pct | round(1) }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-sm text-gray-400 py-6 text-center">No data.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- UTM Campaigns -->
+    {% if analytics.utm_campaigns %}
+    <div class="bg-white rounded-xl border border-gray-200 p-6 mb-8">
+        <h2 class="text-base font-semibold text-gray-900 mb-4">UTM Campaigns</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-100">
+                        <th class="text-left py-2 pr-4">Source</th>
+                        <th class="text-left py-2 pr-4">Medium</th>
+                        <th class="text-left py-2 pr-4">Campaign</th>
+                        <th class="text-right py-2 pr-4">Visitors</th>
+                        <th class="text-right py-2">Views</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for utm in analytics.utm_campaigns %}
+                    <tr class="{% if not loop.last %}border-b border-gray-50{% endif %}">
+                        <td class="py-2.5 pr-4 font-medium text-gray-800">{{ utm.utm_source }}</td>
+                        <td class="py-2.5 pr-4 text-gray-600">{{ utm.utm_medium or "—" }}</td>
+                        <td class="py-2.5 pr-4 text-gray-600">{{ utm.utm_campaign or "—" }}</td>
+                        <td class="py-2.5 pr-4 text-right text-gray-600 tabular-nums">{{ "{:,}".format(utm.unique_visitors) }}</td>
+                        <td class="py-2.5 text-right text-gray-600 tabular-nums">{{ "{:,}".format(utm.pageviews) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Settings link -->
+    <div class="flex items-center justify-center gap-4 pt-4 pb-8">
+        <a href="/sites/{{ site.id }}/settings" class="text-sm text-gray-500 hover:text-gray-700 transition-colors inline-flex items-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            Site settings
+        </a>
+        <a href="/sites" class="text-sm text-gray-500 hover:text-gray-700 transition-colors inline-flex items-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+            All sites
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+const SITE_ID = "{{ site.id }}";
+
+// --- Site Switcher ---
+function toggleSiteSwitcher() {
+    const dd = document.getElementById('site-dropdown');
+    dd.classList.toggle('hidden');
+}
+
+// --- Custom Date Range ---
+function toggleCustomRange() {
+    document.getElementById('custom-range').classList.toggle('hidden');
+}
+
+document.getElementById('custom-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const s = document.getElementById('custom-start').value;
+    const ed = document.getElementById('custom-end').value;
+    if (s && ed) {
+        window.location.href = '/dashboard/' + SITE_ID + '?period=custom&start=' + s + '&end=' + ed;
+    }
+});
+
+// Close dropdowns on outside click
+document.addEventListener('click', function(e) {
+    if (!document.getElementById('site-switcher').contains(e.target)) {
+        document.getElementById('site-dropdown').classList.add('hidden');
+    }
+    if (!e.target.closest('#custom-range') && !e.target.closest('[onclick="toggleCustomRange()"]')) {
+        document.getElementById('custom-range').classList.add('hidden');
+    }
+});
+
+// --- Visitors Over Time Chart ---
+const chartData = {{ analytics.visitors_over_time | tojson }};
+const labels = chartData.map(d => {
+    const dt = new Date(d.date + 'T00:00:00');
+    return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+});
+const pageviewsData = chartData.map(d => d.pageviews);
+const visitorsData = chartData.map(d => d.unique_visitors);
+
+const ctx = document.getElementById('visitors-chart').getContext('2d');
+new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: labels,
+        datasets: [
+            {
+                label: 'Unique Visitors',
+                data: visitorsData,
+                borderColor: '#4f46e5',
+                backgroundColor: 'rgba(79, 70, 229, 0.08)',
+                fill: true,
+                tension: 0.3,
+                borderWidth: 2,
+                pointRadius: chartData.length > 14 ? 0 : 3,
+                pointHoverRadius: 5,
+                pointBackgroundColor: '#4f46e5',
+            },
+            {
+                label: 'Pageviews',
+                data: pageviewsData,
+                borderColor: '#06b6d4',
+                backgroundColor: 'rgba(6, 182, 212, 0.05)',
+                fill: true,
+                tension: 0.3,
+                borderWidth: 2,
+                pointRadius: chartData.length > 14 ? 0 : 3,
+                pointHoverRadius: 5,
+                pointBackgroundColor: '#06b6d4',
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+            mode: 'index',
+            intersect: false,
+        },
+        plugins: {
+            legend: {
+                position: 'top',
+                align: 'end',
+                labels: {
+                    boxWidth: 12,
+                    boxHeight: 12,
+                    borderRadius: 2,
+                    useBorderRadius: true,
+                    font: { size: 12, family: 'Inter' },
+                    padding: 16,
+                }
+            },
+            tooltip: {
+                backgroundColor: '#1f2937',
+                titleFont: { size: 13, family: 'Inter', weight: '600' },
+                bodyFont: { size: 12, family: 'Inter' },
+                padding: 12,
+                cornerRadius: 8,
+                displayColors: true,
+                boxWidth: 8,
+                boxHeight: 8,
+                boxPadding: 4,
+            }
+        },
+        scales: {
+            x: {
+                grid: { display: false },
+                ticks: {
+                    font: { size: 11, family: 'Inter' },
+                    color: '#9ca3af',
+                    maxTicksLimit: 10,
+                },
+                border: { display: false },
+            },
+            y: {
+                beginAtZero: true,
+                grid: { color: '#f3f4f6' },
+                ticks: {
+                    font: { size: 11, family: 'Inter' },
+                    color: '#9ca3af',
+                    precision: 0,
+                },
+                border: { display: false },
+            }
+        }
+    }
+});
+</script>
+{% endblock %}
