@@ -1,5 +1,6 @@
-import pytest
 from datetime import date, timedelta
+
+import pytest
 
 from app.services.analytics import AnalyticsService
 from app.services.auth import AuthService
@@ -14,12 +15,36 @@ async def _seed_data(db):
     await db.commit()
 
     # Record several events with different paths, referrers, browsers, etc.
+    base = {
+        "utm_source": None, "utm_medium": None, "utm_campaign": None,
+    }
     events = [
-        {"visitor_hash": "v1", "path": "/", "referrer_domain": "google.com", "browser": "Chrome", "os": "Windows", "device_type": "desktop", "country_code": "US", "utm_source": "twitter", "utm_medium": "social", "utm_campaign": "launch"},
-        {"visitor_hash": "v1", "path": "/about", "referrer_domain": None, "browser": "Chrome", "os": "Windows", "device_type": "desktop", "country_code": "US", "utm_source": None, "utm_medium": None, "utm_campaign": None},
-        {"visitor_hash": "v2", "path": "/", "referrer_domain": "twitter.com", "browser": "Firefox", "os": "Linux", "device_type": "desktop", "country_code": "DE", "utm_source": None, "utm_medium": None, "utm_campaign": None},
-        {"visitor_hash": "v3", "path": "/pricing", "referrer_domain": "google.com", "browser": "Safari", "os": "macOS", "device_type": "desktop", "country_code": "GB", "utm_source": None, "utm_medium": None, "utm_campaign": None},
-        {"visitor_hash": "v4", "path": "/", "referrer_domain": None, "browser": "Chrome", "os": "Android", "device_type": "mobile", "country_code": "US", "utm_source": None, "utm_medium": None, "utm_campaign": None},
+        {
+            "visitor_hash": "v1", "path": "/", "referrer_domain": "google.com",
+            "browser": "Chrome", "os": "Windows", "device_type": "desktop",
+            "country_code": "US",
+            "utm_source": "twitter", "utm_medium": "social", "utm_campaign": "launch",
+        },
+        {
+            **base, "visitor_hash": "v1", "path": "/about", "referrer_domain": None,
+            "browser": "Chrome", "os": "Windows", "device_type": "desktop",
+            "country_code": "US",
+        },
+        {
+            **base, "visitor_hash": "v2", "path": "/", "referrer_domain": "twitter.com",
+            "browser": "Firefox", "os": "Linux", "device_type": "desktop",
+            "country_code": "DE",
+        },
+        {
+            **base, "visitor_hash": "v3", "path": "/pricing",
+            "referrer_domain": "google.com", "browser": "Safari", "os": "macOS",
+            "device_type": "desktop", "country_code": "GB",
+        },
+        {
+            **base, "visitor_hash": "v4", "path": "/", "referrer_domain": None,
+            "browser": "Chrome", "os": "Android", "device_type": "mobile",
+            "country_code": "US",
+        },
     ]
 
     for ev in events:

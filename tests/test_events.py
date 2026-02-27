@@ -37,19 +37,21 @@ async def test_ingest_event(auth_client, client):
 async def test_ingest_event_minimal(auth_client, client):
     site_id = await _create_site(auth_client)
 
-    resp = await client.post(
-        "/api/v1/event",
-        json={"s": site_id, "u": "https://test.com/", "p": "/", "r": "", "sw": 0, "us": "", "um": "", "uc": "", "ut": "", "ux": ""},
-    )
+    minimal = {
+        "s": site_id, "u": "https://test.com/", "p": "/", "r": "",
+        "sw": 0, "us": "", "um": "", "uc": "", "ut": "", "ux": "",
+    }
+    resp = await client.post("/api/v1/event", json=minimal)
     assert resp.status_code == 202
 
 
 @pytest.mark.asyncio
 async def test_ingest_event_invalid_site(client):
-    resp = await client.post(
-        "/api/v1/event",
-        json={"s": "nonexistent", "u": "https://test.com/", "p": "/", "r": "", "sw": 0, "us": "", "um": "", "uc": "", "ut": "", "ux": ""},
-    )
+    payload = {
+        "s": "nonexistent", "u": "https://test.com/", "p": "/", "r": "",
+        "sw": 0, "us": "", "um": "", "uc": "", "ut": "", "ux": "",
+    }
+    resp = await client.post("/api/v1/event", json=payload)
     assert resp.status_code == 404
 
 
@@ -61,14 +63,15 @@ async def test_ingest_event_bad_body(client):
 
 @pytest.mark.asyncio
 async def test_ingest_event_no_auth_needed(auth_client, client):
-    """Event ingestion should work without auth cookies (tracking script runs on 3rd party sites)."""
+    """Event ingestion works without auth cookies (tracking script runs on 3rd party sites)."""
     site_id = await _create_site(auth_client)
 
     # Use a fresh client without auth cookies
-    resp = await client.post(
-        "/api/v1/event",
-        json={"s": site_id, "u": "https://test.com/", "p": "/", "r": "", "sw": 0, "us": "", "um": "", "uc": "", "ut": "", "ux": ""},
-    )
+    payload = {
+        "s": site_id, "u": "https://test.com/", "p": "/", "r": "",
+        "sw": 0, "us": "", "um": "", "uc": "", "ut": "", "ux": "",
+    }
+    resp = await client.post("/api/v1/event", json=payload)
     assert resp.status_code == 202
 
 

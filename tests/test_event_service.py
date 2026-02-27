@@ -34,18 +34,20 @@ def test_visitor_hash_is_sha256():
 
 
 def test_parse_ua_chrome_windows():
-    info = EventService.parse_user_agent(
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"
-    )
+    ua = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+          "AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36")
+    info = EventService.parse_user_agent(ua)
     assert info["browser"] == "Chrome"
     assert info["os"] == "Windows"
     assert info["device_type"] == "desktop"
 
 
 def test_parse_ua_safari_mac():
-    info = EventService.parse_user_agent(
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+    ua = (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15"
+        " (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
     )
+    info = EventService.parse_user_agent(ua)
     assert info["browser"] == "Safari"
     assert info["os"] == "macOS"
     assert info["device_type"] == "desktop"
@@ -61,9 +63,11 @@ def test_parse_ua_firefox_linux():
 
 
 def test_parse_ua_mobile_android():
-    info = EventService.parse_user_agent(
-        "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36"
+    ua = (
+        "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36"
+        " (KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36"
     )
+    info = EventService.parse_user_agent(ua)
     assert info["browser"] == "Chrome"
     assert info["os"] == "Android"
     assert info["device_type"] == "mobile"
@@ -88,9 +92,11 @@ def test_parse_ua_ipad():
 
 
 def test_parse_ua_edge():
-    info = EventService.parse_user_agent(
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36 Edg/120.0"
+    ua = (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        " Chrome/120 Safari/537.36 Edg/120.0"
     )
+    info = EventService.parse_user_agent(ua)
     assert info["browser"] == "Edge"
 
 
@@ -102,7 +108,8 @@ def test_parse_ua_empty():
 
 
 def test_extract_referrer_domain():
-    assert EventService.extract_referrer_domain("https://www.google.com/search?q=test") == "google.com"
+    result = EventService.extract_referrer_domain("https://www.google.com/search?q=test")
+    assert result == "google.com"
     assert EventService.extract_referrer_domain("https://t.co/abc123") == "t.co"
     assert EventService.extract_referrer_domain("") is None
     assert EventService.extract_referrer_domain("https://example.com") == "example.com"
@@ -115,7 +122,8 @@ def test_detect_country_from_headers():
 
 
 def test_get_client_ip():
-    assert EventService.get_client_ip({"x-forwarded-for": "1.2.3.4, 5.6.7.8"}, "10.0.0.1") == "1.2.3.4"
+    ip = EventService.get_client_ip({"x-forwarded-for": "1.2.3.4, 5.6.7.8"}, "10.0.0.1")
+    assert ip == "1.2.3.4"
     assert EventService.get_client_ip({"x-real-ip": "9.8.7.6"}, "10.0.0.1") == "9.8.7.6"
     assert EventService.get_client_ip({}, "10.0.0.1") == "10.0.0.1"
     assert EventService.get_client_ip({}, None) == "0.0.0.0"

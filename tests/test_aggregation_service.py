@@ -1,6 +1,6 @@
-import pytest
 from datetime import date, timedelta
 
+import pytest
 from sqlalchemy import select
 
 from app.models.stats import (
@@ -246,7 +246,7 @@ async def test_aggregate_day_is_idempotent(db):
 async def test_aggregate_day_no_events(db):
     """Aggregation should handle a day with no events gracefully."""
     user = await AuthService.create_user(db, "Test", "noevents@test.com", "pass1234")
-    site = await SiteService.create_site(db, user.id, "Empty", "empty.com")
+    await SiteService.create_site(db, user.id, "Empty", "empty.com")
     await db.commit()
 
     stats = await AggregationService.aggregate_day(db, date.today())

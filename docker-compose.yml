@@ -1,13 +1,16 @@
 services:
   web:
     build: .
+    container_name: pagepulse
     ports:
-      - "8000:8000"
+      - "${PORT:-8000}:8000"
     environment:
       - APP_ENV=production
       - DEBUG=false
-      - SECRET_KEY=${SECRET_KEY:-change-me-to-a-random-secret-key}
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-change-me-to-a-random-jwt-secret}
+      - SECRET_KEY=${SECRET_KEY:?Set SECRET_KEY in .env}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:?Set JWT_SECRET_KEY in .env}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=${JWT_ACCESS_TOKEN_EXPIRE_MINUTES:-1440}
       - DATABASE_URL=sqlite+aiosqlite:///data/pagepulse.db
     volumes:
       - pagepulse-data:/data
@@ -17,7 +20,7 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 10s
+      start_period: 15s
 
 volumes:
   pagepulse-data:

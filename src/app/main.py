@@ -8,10 +8,13 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from app.api import health
-from app.api.auth import router as auth_router, ui_router as auth_ui_router
-from app.api.dashboard import router as dashboard_router, ui_router as dashboard_ui_router
+from app.api.auth import router as auth_router
+from app.api.auth import ui_router as auth_ui_router
+from app.api.dashboard import router as dashboard_router
+from app.api.dashboard import ui_router as dashboard_ui_router
 from app.api.events import router as events_router
-from app.api.sites import router as sites_router, ui_router as sites_ui_router
+from app.api.sites import router as sites_router
+from app.api.sites import ui_router as sites_ui_router
 from app.api.tracking import router as tracking_router
 from app.config import settings
 from app.database import Base, engine

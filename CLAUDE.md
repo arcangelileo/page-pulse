@@ -1,6 +1,6 @@
 # PagePulse
 
-Phase: DEPLOYMENT
+Phase: COMPLETE
 
 ## Project Spec
 - **Idea**: Privacy-first website analytics platform. A lightweight, cookie-free alternative to Google Analytics that gives website owners clear insights into their traffic without compromising visitor privacy. No cookies, no fingerprinting, no personal data collection — GDPR/CCPA compliant by default, no cookie banner needed. A single <script> tag gives you page views, unique visitors, referrers, top pages, devices, browsers, countries, and UTM campaign tracking in a beautiful, fast dashboard.
@@ -197,6 +197,34 @@ Phase: DEPLOYMENT
   - Updated `test_root_shows_landing_page` and `test_root_redirects_to_dashboard_when_authenticated` in auth tests
 - **Final test count: 135 tests, all passing, zero warnings**
 
+### Session 7 — DEPLOYMENT & FINALIZATION
+- **Dockerfile improvements:**
+  - Added `docker-entrypoint.sh` that runs Alembic migrations before starting uvicorn
+  - ENTRYPOINT + CMD pattern for proper signal handling (PID 1 via `exec`)
+  - Increased health check `start_period` to 15s to account for migration time
+  - Entrypoint made executable in build, `/app` owned by appuser
+- **docker-compose.yml:**
+  - Added `container_name: pagepulse` for easier identification
+  - Aligned health check start_period with Dockerfile (15s)
+- **.env.example:**
+  - Added `cp .env.example .env` usage hint
+  - Updated comments for clarity (JWT token signing key, daily visitor-hash salt)
+  - Fixed minor formatting inconsistencies
+- **README.md enhancements:**
+  - Added Docker one-liner quick start with auto-generated secrets
+  - Added GDPR/CCPA compliance feature callout
+  - Added production checklist section with deployment reminders
+  - Updated API reference with correct event payload field names (`s`, `u`, `r`)
+  - Updated project structure to include `docker-entrypoint.sh`
+  - Clarified tracking script data collection and privacy guarantees
+- **Code cleanup:**
+  - Fixed 8 ruff linter issues (7 E501 line-too-long, 1 F841 unused variable)
+  - Reformatted long test data structures for readability
+  - Split minified JS long lines in tracking script
+  - All linter checks passing (`ruff check src/ tests/` — clean)
+- **Final test count: 135 tests, all passing, zero warnings**
+- Phase changed to COMPLETE
+
 ## Known Issues
 (none)
 
@@ -206,7 +234,8 @@ page-pulse/
 ├── CLAUDE.md
 ├── README.md
 ├── pyproject.toml
-├── Dockerfile                   # Python 3.12-slim container
+├── Dockerfile                   # Multi-stage build, non-root user, health check
+├── docker-entrypoint.sh         # Runs migrations then exec's uvicorn
 ├── docker-compose.yml           # Single-service with SQLite volume
 ├── alembic.ini                  # Alembic config (async SQLAlchemy)
 ├── .gitignore

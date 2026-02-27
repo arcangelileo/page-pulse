@@ -20,9 +20,12 @@ sw:w,
 us:q("utm_source"),um:q("utm_medium"),uc:q("utm_campaign"),ut:q("utm_term"),ux:q("utm_content")
 };
 if(n.sendBeacon){n.sendBeacon(ep,JSON.stringify(data))}
-else{var x=new XMLHttpRequest();x.open("POST",ep,true);x.setRequestHeader("Content-Type","application/json");x.send(JSON.stringify(data))}
+else{var x=new XMLHttpRequest();x.open("POST",ep,true);
+x.setRequestHeader("Content-Type","application/json");x.send(JSON.stringify(data))}
 }
-if(d.visibilityState==="prerender"){d.addEventListener("visibilitychange",function(){if(d.visibilityState!=="prerender")send()},{once:true})}
+if(d.visibilityState==="prerender"){
+d.addEventListener("visibilitychange",function(){
+if(d.visibilityState!=="prerender")send()},{once:true})}
 else{send()}
 var pushState=history.pushState;
 if(pushState){history.pushState=function(){pushState.apply(history,arguments);send()};

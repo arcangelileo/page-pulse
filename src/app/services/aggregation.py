@@ -7,7 +7,6 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.event import PageviewEvent
-from app.models.site import Site
 from app.models.stats import (
     DailyBrowserStats,
     DailyCountryStats,
@@ -269,7 +268,11 @@ class AggregationService:
         current = start_date
         while current <= end_date:
             stats = await AggregationService.aggregate_day(db, current)
-            for key in ["pages", "referrers", "browsers", "devices", "countries", "utms", "sites_processed"]:
+            agg_keys = [
+                "pages", "referrers", "browsers", "devices",
+                "countries", "utms", "sites_processed",
+            ]
+            for key in agg_keys:
                 total[key] += stats[key]
             total["days_processed"] += 1
             current += timedelta(days=1)

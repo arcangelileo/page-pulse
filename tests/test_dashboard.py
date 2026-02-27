@@ -22,10 +22,15 @@ async def _make_site_public(auth_client, site_id):
 
 async def _ingest_event(client, site_id, path="/", referrer=""):
     """Ingest a pageview event for a site."""
+    payload = {
+        "s": site_id, "u": f"https://test.com{path}", "p": path,
+        "r": referrer, "sw": 1920, "us": "", "um": "", "uc": "",
+        "ut": "", "ux": "",
+    }
     resp = await client.post(
         "/api/v1/event",
-        json={"s": site_id, "u": f"https://test.com{path}", "p": path, "r": referrer, "sw": 1920, "us": "", "um": "", "uc": "", "ut": "", "ux": ""},
-        headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0"},
+        json=payload,
+        headers={"User-Agent": "Mozilla/5.0 Chrome/120.0"},
     )
     assert resp.status_code == 202
 
@@ -117,7 +122,7 @@ async def test_dashboard_page_not_found(auth_client):
 async def test_dashboard_site_switcher(auth_client):
     """Dashboard should show all user's sites in the site switcher."""
     site1_id = await _create_site(auth_client, "Site Alpha", "alpha.com")
-    site2_id = await _create_site(auth_client, "Site Beta", "beta.com")
+    await _create_site(auth_client, "Site Beta", "beta.com")
 
     resp = await auth_client.get(f"/dashboard/{site1_id}")
     assert resp.status_code == 200

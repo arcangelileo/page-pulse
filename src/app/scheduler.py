@@ -1,6 +1,5 @@
 """Background scheduler for nightly aggregation jobs."""
 
-import asyncio
 import logging
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler

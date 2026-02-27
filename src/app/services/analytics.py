@@ -1,17 +1,9 @@
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.event import PageviewEvent
-from app.models.stats import (
-    DailyBrowserStats,
-    DailyCountryStats,
-    DailyDeviceStats,
-    DailyPageStats,
-    DailyReferrerStats,
-    DailyUTMStats,
-)
 
 
 class AnalyticsService:
@@ -56,7 +48,9 @@ class AnalyticsService:
         }
 
     @staticmethod
-    async def get_bounce_rate(db: AsyncSession, site_id: str, start_date: date, end_date: date) -> float:
+    async def get_bounce_rate(
+        db: AsyncSession, site_id: str, start_date: date, end_date: date
+    ) -> float:
         """Bounce rate: % of visitors with only 1 pageview in the period."""
         result = await db.execute(
             select(
@@ -90,7 +84,10 @@ class AnalyticsService:
                 func.date(PageviewEvent.timestamp) <= end_date,
             ).group_by("day").order_by("day")
         )
-        data_map = {str(r.day): {"pageviews": r.pageviews, "unique_visitors": r.unique_visitors} for r in result.all()}
+        data_map = {
+            str(r.day): {"pageviews": r.pageviews, "unique_visitors": r.unique_visitors}
+            for r in result.all()
+        }
 
         # Fill in missing days with zeros
         days = []
@@ -119,7 +116,10 @@ class AnalyticsService:
             .order_by(func.count().desc())
             .limit(limit)
         )
-        return [{"path": r.path, "pageviews": r.pageviews, "unique_visitors": r.unique_visitors} for r in result.all()]
+        return [
+            {"path": r.path, "pageviews": r.pageviews, "unique_visitors": r.unique_visitors}
+            for r in result.all()
+        ]
 
     @staticmethod
     async def get_top_referrers(
@@ -140,7 +140,14 @@ class AnalyticsService:
             .order_by(func.count().desc())
             .limit(limit)
         )
-        return [{"referrer_domain": r.referrer_domain, "pageviews": r.pageviews, "unique_visitors": r.unique_visitors} for r in result.all()]
+        return [
+            {
+                "referrer_domain": r.referrer_domain,
+                "pageviews": r.pageviews,
+                "unique_visitors": r.unique_visitors,
+            }
+            for r in result.all()
+        ]
 
     @staticmethod
     async def get_browsers(
@@ -160,7 +167,10 @@ class AnalyticsService:
             .order_by(func.count().desc())
             .limit(limit)
         )
-        return [{"browser": r.browser, "pageviews": r.pageviews, "unique_visitors": r.unique_visitors} for r in result.all()]
+        return [
+            {"browser": r.browser, "pageviews": r.pageviews, "unique_visitors": r.unique_visitors}
+            for r in result.all()
+        ]
 
     @staticmethod
     async def get_devices(
@@ -180,7 +190,14 @@ class AnalyticsService:
             .order_by(func.count().desc())
             .limit(limit)
         )
-        return [{"device_type": r.device_type, "pageviews": r.pageviews, "unique_visitors": r.unique_visitors} for r in result.all()]
+        return [
+            {
+                "device_type": r.device_type,
+                "pageviews": r.pageviews,
+                "unique_visitors": r.unique_visitors,
+            }
+            for r in result.all()
+        ]
 
     @staticmethod
     async def get_countries(
@@ -200,7 +217,14 @@ class AnalyticsService:
             .order_by(func.count().desc())
             .limit(limit)
         )
-        return [{"country_code": r.country_code, "pageviews": r.pageviews, "unique_visitors": r.unique_visitors} for r in result.all()]
+        return [
+            {
+                "country_code": r.country_code,
+                "pageviews": r.pageviews,
+                "unique_visitors": r.unique_visitors,
+            }
+            for r in result.all()
+        ]
 
     @staticmethod
     async def get_utm_campaigns(
@@ -247,7 +271,9 @@ class AnalyticsService:
 
         summary = await AnalyticsService.get_summary(db, site_id, start_date, end_date)
         bounce_rate = await AnalyticsService.get_bounce_rate(db, site_id, start_date, end_date)
-        visitors_over_time = await AnalyticsService.get_visitors_over_time(db, site_id, start_date, end_date)
+        visitors_over_time = await AnalyticsService.get_visitors_over_time(
+            db, site_id, start_date, end_date
+        )
         top_pages = await AnalyticsService.get_top_pages(db, site_id, start_date, end_date)
         top_referrers = await AnalyticsService.get_top_referrers(db, site_id, start_date, end_date)
         browsers = await AnalyticsService.get_browsers(db, site_id, start_date, end_date)

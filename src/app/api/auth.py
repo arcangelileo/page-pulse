@@ -26,7 +26,9 @@ async def register(data: UserRegister, response: Response, db: AsyncSession = De
             status_code=status.HTTP_409_CONFLICT,
             detail="An account with this email already exists",
         )
-    user = await AuthService.create_user(db, name=data.name, email=data.email, password=data.password)
+    user = await AuthService.create_user(
+        db, name=data.name, email=data.email, password=data.password
+    )
     token = AuthService.create_access_token(user.id)
     response.set_cookie(
         key="access_token",

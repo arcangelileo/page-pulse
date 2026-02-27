@@ -1,6 +1,5 @@
 import hashlib
-import re
-from datetime import date, timezone, datetime
+from datetime import date
 from urllib.parse import urlparse
 
 from sqlalchemy.ext.asyncio import AsyncSession

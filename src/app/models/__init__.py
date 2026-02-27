@@ -1,14 +1,14 @@
-from app.models.user import User
-from app.models.site import Site
 from app.models.event import PageviewEvent
+from app.models.site import Site
 from app.models.stats import (
+    DailyBrowserStats,
+    DailyCountryStats,
+    DailyDeviceStats,
     DailyPageStats,
     DailyReferrerStats,
-    DailyBrowserStats,
-    DailyDeviceStats,
-    DailyCountryStats,
     DailyUTMStats,
 )
+from app.models.user import User
 
 __all__ = [
     "User",

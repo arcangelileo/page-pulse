@@ -1,8 +1,8 @@
 from app.schemas.auth import (
-    UserRegister,
-    UserLogin,
-    UserResponse,
     TokenResponse,
+    UserLogin,
+    UserRegister,
+    UserResponse,
 )
 
 __all__ = [
